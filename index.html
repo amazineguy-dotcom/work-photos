@@ -125,7 +125,7 @@ h1 { font-size: 22px; margin: 0; flex: 1; letter-spacing: -.01em; }
   <header class="top">
     <div class="title-row">
       <h1>Work Photos</h1>
-      <button id="help-btn" type="button">Setup</button>
+      <button id="help-btn" type="button">How to send</button>
     </div>
     <p id="summary" class="summary"></p>
     <div class="tools">
@@ -137,7 +137,7 @@ h1 { font-size: 22px; margin: 0; flex: 1; letter-spacing: -.01em; }
   <main id="wall"></main>
   <div id="empty" class="empty" hidden>
     <strong>No work photos yet</strong>
-    Photos taken here stay out of your iPhone photo library. Export them to your work folder, then delete them here.
+    Photos taken here stay out of your iPhone photo library. Send them to your laptop through Teams, then delete them here.
   </div>
 </div>
 
@@ -198,7 +198,7 @@ h1 { font-size: 22px; margin: 0; flex: 1; letter-spacing: -.01em; }
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="share-title">
     <h2 id="share-title">Export</h2>
     <p id="share-msg"></p>
-    <p class="note">In the share sheet, pick your “Save to Work Folder” shortcut. No shortcut yet? Pick “Save to Files” and choose the OneDrive folder.</p>
+    <p class="note">In the share sheet, pick Teams and send to your own chat.</p>
     <div class="btns">
       <button id="share-cancel" type="button">Cancel</button>
       <button id="share-go" class="primary" type="button">Share</button>
@@ -206,21 +206,18 @@ h1 { font-size: 22px; margin: 0; flex: 1; letter-spacing: -.01em; }
   </div>
 </div>
 
-<!-- Shortcut setup guide -->
+<!-- How to send -->
 <div id="help" class="sheet-wrap" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="help-title">
-    <h2 id="help-title">Save straight to a OneDrive folder</h2>
-    <p class="note">One-time setup in the Shortcuts app. After this, Export → your shortcut saves the photos without asking where.</p>
+    <h2 id="help-title">Send photos to your work laptop</h2>
     <ol>
-      <li>Make sure the OneDrive app is installed and signed in, and the target folder exists.</li>
-      <li>Open <b>Shortcuts</b> → tap <b>+</b> to create a new shortcut. Name it <b>Save to Work Folder</b>.</li>
-      <li>Tap the <b>ⓘ</b> (Details) button → turn on <b>Show in Share Sheet</b>. Under Share Sheet Types, keep only <b>Images</b>.</li>
-      <li>Add the action <b>Save File</b>. It should read “Save <i>Shortcut Input</i>”.</li>
-      <li>Expand the action: turn <b>off</b> “Ask Where to Save”. Tap the destination folder and pick <b>OneDrive</b> → your work folder.</li>
-      <li>Tap <b>Done</b>.</li>
+      <li>Tap <b>Export unexported</b> (or open one photo, or <b>Select</b> several and tap <b>Export</b>).</li>
+      <li>In the share sheet, tap <b>Teams</b>. Tip: the first time, tap <b>More</b> and move Teams to the front so it is always first.</li>
+      <li>Pick the chat with <b>yourself</b> (your name, marked &ldquo;You&rdquo;) and tap <b>Send</b>.</li>
+      <li>On the laptop, open that chat in Teams. The photos are also saved to your work OneDrive under <b>Microsoft Teams Chat Files</b>, so they show up on the laptop if OneDrive sync is on.</li>
+      <li>Back here, tap <b>Delete exported</b> to free space.</li>
     </ol>
-    <p class="note">Test it once with one photo. If OneDrive cannot be picked as the destination, use “Save to Files” in the share sheet instead.</p>
-    <p class="note">Photos live only inside this app (not in iCloud). Export before deleting the app from the Home Screen.</p>
+    <p class="note">Photos live only inside this app (not in iCloud). Send them before you remove the app from the Home Screen.</p>
     <div class="btns"><button id="help-close" class="primary" type="button">Got it</button></div>
   </div>
 </div>

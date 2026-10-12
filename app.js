@@ -188,6 +188,7 @@
       sec.appendChild(grid); wall.appendChild(sec);
     });
     renderSummary();
+    warmUp();
   }
   function renderSummary() {
     var bytes = 0, unexp = 0, exp = 0;
@@ -208,44 +209,64 @@
   function setSelecting(on) { selecting = on; if (!on) selected.clear(); render(); }
 
   /* ---------- export ---------- */
-  var pending = null;   // {ids, files}
-  function prepareExport(ids) {
-    ids = ids.filter(byId);
-    if (!ids.length) return;
-    toast("Preparing " + ids.length + " photo" + (ids.length > 1 ? "s" : "") + "…", 60000);
+  // iOS opens the share sheet only from a fresh tap, and reading photos takes a moment.
+  // So the files for whatever Export would send are built ahead of time ("warm"), and the
+  // tap shares them at once. If they are not ready, a sheet asks for a second tap.
+  var WARM_LIMIT = 200 * 1048576;
+  var pending = null, warm = null, warmTimer = null, warmSeq = 0;
+  function exportList(ids) {
+    return photos.filter(function (p) { return ids.indexOf(p.id) !== -1; }).sort(function (a, b) { return a.createdAt - b.createdAt; });
+  }
+  function signature(list) {
+    return list.map(function (p) { return p.id + ":" + p.caption + ":" + (p.edited ? p.bytes : 0); }).join("|");
+  }
+  function buildFiles(list) {
     var used = {};
-    var list = photos.filter(function (p) { return ids.indexOf(p.id) !== -1; }).slice().sort(function (a, b) { return a.createdAt - b.createdAt; });
-    Promise.all(list.map(function (p) {
+    return Promise.all(list.map(function (p) {
       return fullBlob(p).then(function (b) { return new File([b], fileName(p, used), { type: "image/jpeg", lastModified: p.createdAt }); });
-    })).then(function (files) {
+    }));
+  }
+  function targetIds() {
+    if (!$("detail").hidden && detailId) return [detailId];
+    if (selecting) return Array.from(selected);
+    return photos.filter(function (p) { return !p.exportedAt; }).map(function (p) { return p.id; });
+  }
+  function warmUp() {
+    clearTimeout(warmTimer);
+    warmTimer = setTimeout(function () {
+      var list = exportList(targetIds()), sig = signature(list);
+      var bytes = list.reduce(function (n, p) { return n + (p.bytes || 0); }, 0);
+      if (!list.length || bytes > WARM_LIMIT) { warm = null; warmSeq++; return; }
+      if (warm && warm.sig === sig) return;
+      var seq = ++warmSeq;
+      buildFiles(list).then(function (files) {
+        if (seq === warmSeq) warm = { sig: sig, ids: list.map(function (p) { return p.id; }), files: files };
+      }).catch(function () {});
+    }, 250);
+  }
+  function startExport(ids) {
+    var list = exportList(ids.filter(byId));
+    if (!list.length) return;
+    if (warm && warm.sig === signature(list)) { share(warm); return; }
+    toast("Preparing " + list.length + " photo" + (list.length > 1 ? "s" : "") + "…", 60000);
+    buildFiles(list).then(function (files) {
       $("toast").hidden = true;
-      pending = { ids: list.map(function (p) { return p.id; }), files: files };
-      var size = files.reduce(function (s, f) { return s + f.size; }, 0);
-      $("share-msg").textContent = files.length + " photo" + (files.length > 1 ? "s" : "") + " ready (" + fmtBytes(size) + ").";
-      $("share-sheet").hidden = false;
-      $("share-go").focus();
+      askToShare({ ids: list.map(function (p) { return p.id; }), files: files });
     }).catch(function () { toast("Could not read the photos."); });
   }
-  function markExported(ids) {
-    var now = Date.now();
-    return Promise.all(ids.map(function (id) { var p = byId(id); if (!p) return null; p.exportedAt = now; return putMeta(p); }));
+  function askToShare(job) {
+    pending = job;
+    var size = job.files.reduce(function (n, f) { return n + f.size; }, 0);
+    $("share-msg").textContent = job.files.length + " photo" + (job.files.length > 1 ? "s" : "") + " ready (" + fmtBytes(size) + ").";
+    $("share-sheet").hidden = false;
+    $("share-go").focus();
   }
-  function closeShare() { $("share-sheet").hidden = true; pending = null; }
-  $("share-cancel").addEventListener("click", closeShare);
-  $("share-go").addEventListener("click", function () {
-    if (!pending) return;
-    var job = pending;
+  function share(job) {
     if (navigator.canShare && navigator.canShare({ files: job.files })) {
-      // Called directly in the tap handler so iOS accepts it as a user action.
-      navigator.share({ files: job.files }).then(function () {
-        closeShare();
-        return markExported(job.ids).then(function () {
-          if (selecting) setSelecting(false); else render();
-          refreshDetail();
-          toast("Exported " + job.ids.length + ". Delete them here when you're sure they arrived.", 4000);
-        });
-      }).catch(function (e) {
-        if (e && e.name === "AbortError") return;   // user closed the share sheet
+      // Must run synchronously inside the tap handler.
+      navigator.share({ files: job.files }).then(function () { exported(job, false); }).catch(function (e) {
+        if (e && e.name === "AbortError") return;                            // share sheet closed
+        if (e && e.name === "NotAllowedError") { askToShare(job); return; }  // tap too old; ask again
         toast("Sharing failed: " + ((e && e.message) || e));
       });
       return;
@@ -259,10 +280,22 @@
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
       }, i * 300);
     });
+    exported(job, true);
+  }
+  function exported(job, downloaded) {
     closeShare();
-    markExported(job.ids).then(function () { if (selecting) setSelecting(false); else render(); refreshDetail(); });
-    toast("Downloading " + job.files.length + " file" + (job.files.length > 1 ? "s" : "") + ".");
-  });
+    var now = Date.now();
+    Promise.all(job.ids.map(function (id) { var p = byId(id); if (!p) return null; p.exportedAt = now; return putMeta(p); })).then(function () {
+      warm = null;
+      if (selecting) setSelecting(false); else render();
+      refreshDetail();
+      toast(downloaded ? "Downloading " + job.files.length + " file" + (job.files.length > 1 ? "s" : "") + "."
+        : "Sent " + job.ids.length + ". Delete them here once they're on your laptop.", 4000);
+    });
+  }
+  function closeShare() { $("share-sheet").hidden = true; pending = null; }
+  $("share-cancel").addEventListener("click", closeShare);
+  $("share-go").addEventListener("click", function () { if (pending) share(pending); });
 
   /* ---------- detail ---------- */
   var detailId = null, detailUrl = null, capTimer = null;
@@ -278,6 +311,7 @@
     $("d-state").textContent = p.exportedAt ? "Exported " + fmtTime(p.exportedAt) : "Not exported";
     if (document.activeElement !== $("d-caption")) $("d-caption").value = p.caption;
     $("d-unmark").hidden = !p.edited;
+    warmUp();
     $("d-markup").textContent = p.edited ? "Edit markup" : "Mark up";
     if (reloadImage) {
       fullBlob(p).then(function (b) {
@@ -304,11 +338,12 @@
   $("d-caption").addEventListener("input", function (e) {
     var p = byId(detailId); if (!p) return;
     p.caption = e.target.value.slice(0, 120);
+    warmUp();
     clearTimeout(capTimer);
     capTimer = setTimeout(function () { capTimer = null; putMeta(p); }, 400);
   });
   $("d-caption").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing) e.target.blur(); });
-  $("d-export").addEventListener("click", function () { flushCaption(); if (detailId) prepareExport([detailId]); });
+  $("d-export").addEventListener("click", function () { flushCaption(); if (detailId) startExport([detailId]); });
   $("d-delete").addEventListener("click", function () {
     var p = byId(detailId); if (!p) return;
     if (!confirm(p.exportedAt ? "Delete this photo?" : "This photo has not been exported. Delete it anyway?")) return;
@@ -482,7 +517,7 @@
   $("import-input").addEventListener("change", function (e) { addFiles(e.target.files, false); e.target.value = ""; });
   $("select-btn").addEventListener("click", function () { setSelecting(true); });
   $("sel-done").addEventListener("click", function () { setSelecting(false); });
-  $("sel-export").addEventListener("click", function () { prepareExport(Array.from(selected)); });
+  $("sel-export").addEventListener("click", function () { startExport(Array.from(selected)); });
   $("sel-del").addEventListener("click", function () {
     var ids = Array.from(selected), unexp = ids.filter(function (id) { var p = byId(id); return p && !p.exportedAt; }).length;
     var msg = "Delete " + ids.length + " photo" + (ids.length > 1 ? "s" : "") + "?" + (unexp ? " " + unexp + " of them have not been exported." : "");
@@ -490,7 +525,7 @@
     deletePhotos(ids).then(function () { setSelecting(false); toast("Deleted " + ids.length + "."); });
   });
   $("export-new-btn").addEventListener("click", function () {
-    prepareExport(photos.filter(function (p) { return !p.exportedAt; }).map(function (p) { return p.id; }));
+    startExport(photos.filter(function (p) { return !p.exportedAt; }).map(function (p) { return p.id; }));
   });
   $("clean-btn").addEventListener("click", function () {
     var ids = photos.filter(function (p) { return p.exportedAt; }).map(function (p) { return p.id; });
