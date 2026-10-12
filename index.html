@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Work Photos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Work Photos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F1F2F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14181D" media="(prefers-color-scheme: dark)">
+<style>
+/* Work-site palette: slate surfaces, safety-amber accent for the camera action. */
+:root {
+  --bg: #F1F2F4;
+  --card: #FFFFFF;
+  --ink: #1A2028;
+  --muted: #5E6874;
+  --line: #D6DBE1;
+  --accent: #C98A12;
+  --accent-strong: #F2B544;
+  --accent-ink: #1A1300;
+  --sel: #2F6FD6;
+  --ok: #1E7A46;
+  --danger: #B42335;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang TC", system-ui, sans-serif;
+  --bar-h: 76px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181D; --card: #1D232B; --ink: #E7EBF0; --muted: #96A1AE; --line: #2D3540;
+    --accent: #F2B544; --accent-strong: #F2B544; --accent-ink: #1A1300; --sel: #6FA3F0;
+    --ok: #5FCB8D; --danger: #F07D8C; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181D; --card: #1D232B; --ink: #E7EBF0; --muted: #96A1AE; --line: #2D3540;
+  --accent: #F2B544; --accent-strong: #F2B544; --accent-ink: #1A1300; --sel: #6FA3F0;
+  --ok: #5FCB8D; --danger: #F07D8C; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.45;
+  -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+[hidden] { display: none !important; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); }
+button:disabled { opacity: .45; cursor: default; }
+:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-ink); font-weight: 700; }
+.danger { color: var(--danger); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+.page { max-width: 760px; margin: 0 auto;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) calc(var(--bar-h) + 24px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+.top { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.title-row { display: flex; align-items: center; gap: 10px; }
+h1 { font-size: 22px; margin: 0; flex: 1; letter-spacing: -.01em; }
+.summary { margin: 0; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tools button { min-height: 38px; padding: 6px 12px; font-size: 14px; }
+
+.day h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 4px; }
+.tile { position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 6px; overflow: hidden; background: var(--line); min-height: 0; }
+.tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 4px; font-size: 11px; color: #fff; text-align: left;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .65)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .done { position: absolute; top: 5px; left: 5px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(20, 110, 60, .9); color: #fff; }
+.tile .check { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; background: rgba(0, 0, 0, .25); }
+.tile[aria-pressed="true"] { outline: 3px solid var(--sel); outline-offset: -3px; }
+.tile[aria-pressed="true"] .check { background: var(--sel); }
+.tile[aria-pressed="true"] .check::after { content: ""; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.empty { text-align: center; padding: 48px 16px; color: var(--muted); }
+.empty strong { display: block; color: var(--ink); font-size: 18px; margin-bottom: 6px; }
+
+.bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; gap: 8px; align-items: center; justify-content: center;
+  padding: 12px max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line); }
+.bar .shoot { min-width: 180px; min-height: 52px; font-size: 18px; border-radius: 26px; }
+.bar .count { flex: 1; font-size: 14px; color: var(--muted); text-align: center; }
+
+.overlay { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; background: var(--bg);
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); gap: 10px; }
+.ov-head { display: flex; align-items: center; gap: 8px; }
+.ov-head .grow { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.view-img { flex: 1; min-height: 0; display: grid; place-items: center; background: #000; border-radius: 8px; overflow: hidden; }
+.view-img img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.caption { width: 100%; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.ov-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.ov-btns button { flex: 1; min-width: 90px; }
+
+.ed-tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ed-tools button { min-height: 38px; padding: 6px 10px; font-size: 14px; }
+.ed-tools button[aria-pressed="true"] { border-color: var(--sel); color: var(--sel); font-weight: 600; }
+.swatch { width: 34px; min-width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 50%; border: 2px solid var(--line); }
+.swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
+.sw-red { background: #E5262E; } .sw-yellow { background: #FFD21F; } .sw-white { background: #FFFFFF; }
+.ed-text { flex: 1; min-width: 140px; font-size: 16px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.ed-stage { flex: 1; min-height: 0; display: grid; place-items: center; background: #000; border-radius: 8px; overflow: hidden; }
+.ed-stage canvas { touch-action: none; display: block; }
+
+.sheet-wrap { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 520px; max-height: 92%; overflow-y: auto; background: var(--card); border-radius: 16px 16px 0 0; display: flex; flex-direction: column; gap: 12px;
+  padding: 20px max(18px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
+@media (min-width: 560px) { .sheet-wrap { align-items: center; } .sheet { border-radius: 16px; } }
+.sheet h2 { margin: 0; font-size: 20px; }
+.sheet p { margin: 0; }
+.sheet ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.sheet .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.note { font-size: 14px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(var(--bar-h) + 16px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 40;
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="title-row">
+      <h1>Work Photos</h1>
+      <button id="help-btn" type="button">Setup</button>
+    </div>
+    <p id="summary" class="summary"></p>
+    <div class="tools">
+      <button id="select-btn" type="button">Select</button>
+      <button id="export-new-btn" type="button">Export unexported</button>
+      <button id="clean-btn" class="danger" type="button">Delete exported</button>
+    </div>
+  </header>
+  <main id="wall"></main>
+  <div id="empty" class="empty" hidden>
+    <strong>No work photos yet</strong>
+    Photos taken here stay out of your iPhone photo library. Export them to your work folder, then delete them here.
+  </div>
+</div>
+
+<nav id="bar-main" class="bar">
+  <button id="import-btn" type="button">Import</button>
+  <button id="shoot-btn" class="primary shoot" type="button">Take photo</button>
+</nav>
+<nav id="bar-select" class="bar" hidden>
+  <button id="sel-done" type="button">Done</button>
+  <span id="sel-count" class="count">0 selected</span>
+  <button id="sel-del" class="danger" type="button">Delete</button>
+  <button id="sel-export" class="primary" type="button">Export</button>
+</nav>
+
+<input id="shoot-input" type="file" accept="image/*" capture="environment" hidden>
+<input id="import-input" type="file" accept="image/*" multiple hidden>
+
+<!-- Single photo -->
+<div id="detail" class="overlay" hidden>
+  <div class="ov-head">
+    <button id="d-close" type="button">Close</button>
+    <span id="d-title" class="grow"></span>
+    <span id="d-state" class="muted small"></span>
+  </div>
+  <div class="view-img"><img id="d-img" alt="Work photo"></div>
+  <input id="d-caption" class="caption" type="text" placeholder="Caption (used in the file name)" autocomplete="off" enterkeyhint="done">
+  <div class="ov-btns">
+    <button id="d-markup" type="button">Mark up</button>
+    <button id="d-unmark" type="button" hidden>Remove markup</button>
+    <button id="d-export" class="primary" type="button">Export</button>
+    <button id="d-delete" class="danger" type="button">Delete</button>
+  </div>
+</div>
+
+<!-- Markup editor -->
+<div id="editor" class="overlay" hidden>
+  <div class="ov-head">
+    <button id="e-cancel" type="button">Cancel</button>
+    <span class="grow">Mark up</span>
+    <button id="e-undo" type="button">Undo</button>
+    <button id="e-save" class="primary" type="button">Save</button>
+  </div>
+  <div class="ed-tools">
+    <button type="button" data-tool="circle" aria-pressed="true">Circle</button>
+    <button type="button" data-tool="arrow" aria-pressed="false">Arrow</button>
+    <button type="button" data-tool="pen" aria-pressed="false">Pen</button>
+    <button type="button" data-tool="text" aria-pressed="false">Text</button>
+    <button type="button" class="swatch sw-red" data-color="#E5262E" aria-label="Red" aria-pressed="true"></button>
+    <button type="button" class="swatch sw-yellow" data-color="#FFD21F" aria-label="Yellow" aria-pressed="false"></button>
+    <button type="button" class="swatch sw-white" data-color="#FFFFFF" aria-label="White" aria-pressed="false"></button>
+  </div>
+  <input id="e-text" class="ed-text" type="text" placeholder="Type text, then tap the photo to place it" autocomplete="off" hidden>
+  <div id="e-stage" class="ed-stage"><canvas id="e-canvas"></canvas></div>
+</div>
+
+<!-- Export: second tap opens the iOS share sheet (it needs a fresh tap) -->
+<div id="share-sheet" class="sheet-wrap" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="share-title">
+    <h2 id="share-title">Export</h2>
+    <p id="share-msg"></p>
+    <p class="note">In the share sheet, pick your “Save to Work Folder” shortcut. No shortcut yet? Pick “Save to Files” and choose the OneDrive folder.</p>
+    <div class="btns">
+      <button id="share-cancel" type="button">Cancel</button>
+      <button id="share-go" class="primary" type="button">Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shortcut setup guide -->
+<div id="help" class="sheet-wrap" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <h2 id="help-title">Save straight to a OneDrive folder</h2>
+    <p class="note">One-time setup in the Shortcuts app. After this, Export → your shortcut saves the photos without asking where.</p>
+    <ol>
+      <li>Make sure the OneDrive app is installed and signed in, and the target folder exists.</li>
+      <li>Open <b>Shortcuts</b> → tap <b>+</b> to create a new shortcut. Name it <b>Save to Work Folder</b>.</li>
+      <li>Tap the <b>ⓘ</b> (Details) button → turn on <b>Show in Share Sheet</b>. Under Share Sheet Types, keep only <b>Images</b>.</li>
+      <li>Add the action <b>Save File</b>. It should read “Save <i>Shortcut Input</i>”.</li>
+      <li>Expand the action: turn <b>off</b> “Ask Where to Save”. Tap the destination folder and pick <b>OneDrive</b> → your work folder.</li>
+      <li>Tap <b>Done</b>.</li>
+    </ol>
+    <p class="note">Test it once with one photo. If OneDrive cannot be picked as the destination, use “Save to Files” in the share sheet instead.</p>
+    <p class="note">Photos live only inside this app (not in iCloud). Export before deleting the app from the Home Screen.</p>
+    <div class="btns"><button id="help-close" class="primary" type="button">Got it</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
