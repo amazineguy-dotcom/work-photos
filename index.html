@@ -118,6 +118,8 @@ h1 { font-size: 22px; margin: 0; flex: 1; letter-spacing: -.01em; }
 .note { font-size: 14px; color: var(--muted); }
 .toast { position: fixed; left: 50%; bottom: calc(var(--bar-h) + 16px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 40;
   background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); text-align: center; }
+/* Pinch zoom still works; double-tap zoom is off so quick taps never zoom the page. */
+html, body, button, a, input, textarea, select, label, summary { touch-action: manipulation; }
 </style>
 </head>
 <body>
